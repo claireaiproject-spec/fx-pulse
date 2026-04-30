@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Analytics } from '@vercel/analytics/react';
 
 const PAIRS = [
   { from: "USD", to: "EUR", flag1: "🇺🇸", flag2: "🇪🇺" },
@@ -505,6 +506,7 @@ export default function App() {
           </div>
         )}
       </div>
+      <Analytics />
     </div>
   );
 }
