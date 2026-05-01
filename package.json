@@ -2,11 +2,13 @@
   "name": "fx-pulse",
   "version": "1.0.0",
   "dependencies": {
-    "@sparticuz/chromium": "^123.0.0",
-    "puppeteer-core": "^22.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1"
+  },
+  "devDependencies": {
+    "@sparticuz/chromium": "^123.0.0",
+    "puppeteer-core": "^22.0.0"
   },
   "scripts": {
     "start": "react-scripts start",
