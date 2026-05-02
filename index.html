@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FX Pulse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #080c14; color: #e8edf5; font-family: 'DM Sans', 'Segoe UI', sans-serif; min-height: 100vh; }
+    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: #0d1320; } ::-webkit-scrollbar-thumb { background: #2a3448; border-radius: 4px; }
+    .mono { font-family: 'DM Mono', monospace; }
+    .btn { cursor: pointer; border: none; border-radius: 8px; font-family: inherit; font-weight: 500; transition: all .15s; }
+    .btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .card { background: #0d1320; border: 1px solid #1a2235; border-radius: 14px; padding: 18px; transition: border-color .2s; }
+    .card:hover { border-color: #2a3a58; }
+    .nav-tab { padding: 8px 18px; border-radius: 8px; border: none; font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .2s; white-space: nowrap; background: transparent; color: #6b7a96; }
+    .nav-tab.active { background: #1e40af; color: #fff; }
+    .nav-tab:hover:not(.active) { color: #e8edf5; background: #0d1320; }
+    .tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; letter-spacing: .05em; text-transform: uppercase; }
+    input, select { background: #0d1320; color: #e8edf5; border: 1px solid #1e2a3a; border-radius: 8px; padding: 10px 14px; font-family: inherit; font-size: 14px; outline: none; transition: border-color .2s; width: 100%; }
+    input:focus, select:focus { border-color: #3b82f6; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideIn { from{opacity:0;transform:translateX(16px)} to{opacity:1;transform:translateX(0)} }
+    .pulse { animation: pulse 2s infinite; }
+    .spin { animation: spin 1s linear infinite; }
+    .fade-in { animation: fadeIn .4s ease; }
+    .notif-anim { animation: slideIn .3s ease; }
+    #app { display: flex; flex-direction: column; min-height: 100vh; }
+    .header { border-bottom: 1px solid #1a2235; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: #080c14; z-index: 100; }
+    .cimb-hero { background: linear-gradient(135deg,#1c0000,#2d0404); border-bottom: 1px solid #500a0a; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+    .nav-bar { display: flex; gap: 4px; padding: 12px 20px; border-bottom: 1px solid #1a2235; overflow-x: auto; }
+    .content { flex: 1; padding: 20px; max-width: 900px; width: 100%; margin: 0 auto; }
+    .rate-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 12px; }
+    .rate-card { cursor: pointer; }
+    .rate-card.featured { border-color: #500a0a !important; background: #0e0808 !important; }
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+    .form-row > * { flex: 1 1 120px; }
+    .form-row .btn { flex: 0 0 auto; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+
+  <div class="header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:32px;height:32px;background:linear-gradient(135deg,#1d4ed8,#7c3aed);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px">₿</div>
+      <div>
+        <div style="font-weight:600;font-size:15px;letter-spacing:-.02em">FX Pulse</div>
+        <div class="mono" style="font-size:11px;color:#4a5568;display:flex;align-items:center;gap:5px">
+          <span id="status-dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#4a5568"></span>
+          <span id="status-text">Starting…</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div id="notif-toast" style="display:none;max-width:210px;background:#0f2040;border:1px solid #1e3a60;border-radius:8px;padding:5px 10px;font-size:11px;color:#93c5fd;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"></div>
+      <div style="position:relative">
+        <button class="btn" onclick="toggleNotifs()" style="background:#0d1320;border:1px solid #1a2235;color:#6b7a96;padding:7px 10px;font-size:16px">🔔</button>
+        <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;border-radius:50%;width:16px;height:16px;font-size:10px;display:none;align-items:center;justify-content:center;font-weight:700"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CIMB Hero -->
+
+  <div class="cimb-hero">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div style="width:44px;height:44px;background:#CC0001;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:22px;flex-shrink:0">C</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+          <span style="font-size:11px;color:#cc4444;font-weight:700;text-transform:uppercase;letter-spacing:.07em">CIMB Clicks · SGD → MYR</span>
+          <span id="cimb-badge" class="tag" style="background:#3a0505;color:#fca5a5">loading</span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span id="cimb-rate" class="mono" style="font-size:32px;font-weight:700;letter-spacing:-.03em;color:#fff">—</span>
+          <span style="font-size:13px;color:#9a5050;font-weight:400">MYR per SGD</span>
+        </div>
+        <div id="cimb-time" class="mono" style="font-size:11px;color:#7a3030;margin-top:4px"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a href="https://www.cimbclicks.com.sg/sgd-to-myr" target="_blank"
+        style="display:inline-flex;align-items:center;gap:5px;background:#CC0001;color:#fff;padding:9px 14px;font-size:13px;border-radius:8px;text-decoration:none;font-weight:600">
+        🌐 Open CIMB ↗
+      </a>
+      <button class="btn" onclick="goTab('alerts');setAlertPair('SGD-MYR')" style="background:#3a0a0a;border:1px solid #7a1a1a;color:#fca5a5;padding:9px 12px;font-size:13px">🎯 Alert</button>
+      <button class="btn" onclick="goTab('convert');setConvPair('SGD','MYR')" style="background:#1a0000;border:1px solid #7a1a1a;color:#fca5a5;padding:9px 12px;font-size:13px">🔄 Convert</button>
+      <button class="btn" onclick="loadAll()" style="background:#1a0000;border:1px solid #4a0a0a;color:#7a3030;padding:9px 12px;font-size:13px">↻</button>
+    </div>
+  </div>
+
+  <!-- Nav -->
+
+  <div class="nav-bar">
+    <button class="nav-tab active" id="tab-rates"   onclick="goTab('rates')">📈 Rates</button>
+    <button class="nav-tab"        id="tab-alerts"  onclick="goTab('alerts')">🎯 Alerts</button>
+    <button class="nav-tab"        id="tab-convert" onclick="goTab('convert')">🔄 Convert</button>
+    <button class="nav-tab"        id="tab-banking" onclick="goTab('banking')">🏦 Banking</button>
+  </div>
+
+  <!-- Content -->
+
+  <div class="content fade-in">
+
+```
+<!-- RATES -->
+<div id="view-rates">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+    <div>
+      <h2 style="font-size:17px;font-weight:600">Live Exchange Rates</h2>
+      <div style="font-size:11px;color:#4a5568;margin-top:2px">SGD/MYR from <span style="color:#fca5a5">CIMB</span> · Others from <span style="color:#6ee7e7">ExchangeRate-API</span></div>
+    </div>
+    <button class="btn" onclick="loadAll()" style="background:#0d1320;border:1px solid #1a2235;color:#6b7a96;padding:6px 14px;font-size:12px">↻ Refresh</button>
+  </div>
+  <div id="rate-loading" style="text-align:center;padding:60px 0;color:#4a5568">
+    <div class="spin" style="width:30px;height:30px;border:2px solid #1e3a60;border-top-color:#3b82f6;border-radius:50%;margin:0 auto 12px"></div>
+    <div>Fetching live rates…</div>
+    <div style="font-size:11px;margin-top:6px;color:#2a3448">CIMB rate via serverless scraper</div>
+  </div>
+  <div id="rate-grid" class="rate-grid" style="display:none"></div>
+  <div style="margin-top:14px;font-size:11px;color:#2a3448;text-align:center">
+    SGD/MYR: <a href="https://www.cimbclicks.com.sg/sgd-to-myr" target="_blank" style="color:#fca5a5;text-decoration:none">CIMB Clicks ↗</a> ·
+    Others: <a href="https://exchangerate-api.com" target="_blank" style="color:#6ee7e7;text-decoration:none">ExchangeRate-API</a>
+  </div>
+</div>
+
+<!-- ALERTS -->
+<div id="view-alerts" style="display:none">
+  <h2 style="font-size:17px;font-weight:600;margin-bottom:16px">Rate Alerts</h2>
+  <div class="card" style="margin-bottom:20px">
+    <div style="font-size:12px;color:#6b7a96;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">New Alert</div>
+    <div class="form-row">
+      <div><select id="alert-pair">
+        <option value="SGD-MYR">SGD / MYR</option>
+        <option value="SGD-USD">SGD / USD</option>
+        <option value="SGD-CNY">SGD / CNY</option>
+        <option value="SGD-JPY">SGD / JPY</option>
+        <option value="MYR-USD">MYR / USD</option>
+        <option value="MYR-CNY">MYR / CNY</option>
+      </select></div>
+      <div><select id="alert-type">
+        <option value="above">Rises Above</option>
+        <option value="below">Falls Below</option>
+      </select></div>
+      <div><input type="number" id="alert-value" step="0.0001" placeholder="Rate" /></div>
+      <button class="btn" onclick="addAlert()" style="background:#1d4ed8;color:#fff;padding:10px 20px;font-size:14px">+ Add</button>
+    </div>
+    <div id="alert-current" style="margin-top:8px;font-size:12px;color:#4a5568"></div>
+  </div>
+  <div id="alerts-list"></div>
+  <div id="notif-log" style="margin-top:24px"></div>
+</div>
+
+<!-- CONVERT -->
+<div id="view-convert" style="display:none">
+  <h2 style="font-size:17px;font-weight:600;margin-bottom:16px">Currency Converter</h2>
+  <div class="card">
+    <div class="form-row">
+      <div>
+        <div style="font-size:12px;color:#6b7a96;margin-bottom:6px">Amount</div>
+        <input type="number" id="conv-amount" placeholder="0.00" oninput="clearResult()" />
+      </div>
+      <div>
+        <div style="font-size:12px;color:#6b7a96;margin-bottom:6px">From</div>
+        <select id="conv-from" onchange="clearResult()">
+          <option>SGD</option><option>MYR</option><option>USD</option><option>CNY</option><option>JPY</option>
+        </select>
+      </div>
+      <div style="flex:0 0 auto;align-self:flex-end">
+        <button class="btn" onclick="swapConv()" style="background:#0d1320;border:1px solid #1a2235;color:#6b7a96;padding:10px 12px;font-size:18px">⇄</button>
+      </div>
+      <div>
+        <div style="font-size:12px;color:#6b7a96;margin-bottom:6px">To</div>
+        <select id="conv-to" onchange="clearResult()">
+          <option>MYR</option><option>SGD</option><option>USD</option><option>CNY</option><option>JPY</option>
+        </select>
+      </div>
+      <button class="btn" onclick="doConvert()" style="background:#1d4ed8;color:#fff;padding:10px 22px;font-size:14px">Convert</button>
+    </div>
+    <div id="conv-result" style="display:none;margin-top:20px;padding:16px;background:#060a12;border-radius:10px;border:1px solid #1e3a60">
+      <div style="font-size:12px;color:#6b7a96;margin-bottom:8px">Result · <span id="conv-source-label"></span></div>
+      <div class="mono" id="conv-display" style="font-size:26px;font-weight:600;letter-spacing:-.03em"></div>
+      <div class="mono" id="conv-rate-label" style="font-size:12px;color:#4a5568;margin-top:6px"></div>
+      <button class="btn" onclick="goTab('banking')" style="margin-top:12px;background:#1a2f1a;color:#86efac;padding:8px 16px;font-size:12px">Execute via Banking App →</button>
+    </div>
+  </div>
+</div>
+
+<!-- BANKING -->
+<div id="view-banking" style="display:none">
+  <h2 style="font-size:17px;font-weight:600;margin-bottom:4px">Banking Apps</h2>
+  <p style="font-size:13px;color:#4a5568;margin-bottom:20px">Grant permission then execute, or open the app directly.</p>
+  <div id="conv-ready-banner" style="display:none;background:#0a1a10;border:1px solid #1a3a20;border-radius:10px;padding:14px;margin-bottom:20px;display:none;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div>
+      <div style="font-size:11px;color:#4a5568;margin-bottom:3px">Ready to execute</div>
+      <div class="mono" id="banking-ready-text" style="font-size:15px"></div>
+    </div>
+    <span class="tag" style="background:#1a3a20;color:#86efac">READY</span>
+  </div>
+  <div id="banking-list"></div>
+  <div style="margin-top:20px;padding:12px 16px;background:#0d1018;border-radius:10px;border:1px solid #1a2235;font-size:12px;color:#4a5568;line-height:1.8">
+    🔒 <strong style="color:#6b7a96">Privacy:</strong> Granting access lets FX Pulse initiate one transfer per session via the app's own website. No credentials stored.
+  </div>
+</div>
+```
+
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+const PAIRS = [
+  { from:'SGD', to:'MYR', f1:'🇸🇬', f2:'🇲🇾', featured:true  },
+  { from:'SGD', to:'USD', f1:'🇸🇬', f2:'🇺🇸' },
+  { from:'SGD', to:'CNY', f1:'🇸🇬', f2:'🇨🇳' },
+  { from:'SGD', to:'JPY', f1:'🇸🇬', f2:'🇯🇵' },
+  { from:'MYR', to:'USD', f1:'🇲🇾', f2:'🇺🇸' },
+  { from:'MYR', to:'CNY', f1:'🇲🇾', f2:'🇨🇳' },
+];
+const BANKING = [
+  { id:'cimb',    name:'CIMB Clicks', color:'#CC0001', icon:'C', desc:'Best SGD→MYR · Zero fees', url:'https://www.cimbclicks.com.sg/sgd-to-myr' },
+  { id:'wise',    name:'Wise',        color:'#00B9A9', icon:'W', desc:'Mid-market rate · Low fees', url:'https://wise.com/send#source-currency=SGD' },
+  { id:'revolut', name:'Revolut',     color:'#0075EB', icon:'R', desc:'Exchange & spend globally',  url:'https://revolut.com' },
+  { id:'paypal',  name:'PayPal',      color:'#003087', icon:'P', desc:'International payments',     url:'https://paypal.com' },
+];
+let rates    = {};   // "SGD-MYR" -> { rate, label, fetchedAt }
+let history  = {};   // "SGD-MYR" -> [{r}]
+let alerts   = [];
+let notifs   = [];
+let perms    = {};
+let convData = null;
+let currentView = 'rates';
+
+// ── Fetch rates ───────────────────────────────────────────────────────────
+async function fetchCIMB() {
+  try {
+    const r = await fetch('/api/cimb-rate');
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    if (d.success && d.rate) return { rate: d.rate, label: 'CIMB', fetchedAt: d.fetchedAt };
+  } catch {}
+  return null;
+}
+
+async function fetchMarket(base) {
+  // Primary: open.er-api.com — CORS-safe, no key
+  try {
+    const r = await fetch(`https://open.er-api.com/v6/latest/${base}`);
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    if (d.rates) return { rates: d.rates, label: 'ExchangeRate-API', upper: true };
+  } catch {}
+  // Fallback: fawazahmed0 CDN — also CORS-safe
+  try {
+    const r = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${base.toLowerCase()}.json`);
+    const d = await r.json();
+    const key = base.toLowerCase();
+    if (d[key]) return { rates: d[key], label: 'fawazahmed0', upper: false };
+  } catch {}
+  return null;
+}
+
+async function loadAll() {
+  setStatus('loading');
+  const next = {};
+
+  // Fetch CIMB + SGD base + MYR base in parallel
+  const [cimbRes, sgdBase, myrBase] = await Promise.all([
+    fetchCIMB(),
+    fetchMarket('SGD'),
+    fetchMarket('MYR'),
+  ]);
+
+  const baseMap = { SGD: sgdBase, MYR: myrBase };
+
+  // SGD-MYR from CIMB
+  if (cimbRes) next['SGD-MYR'] = cimbRes;
+
+  // Other pairs from market APIs
+  PAIRS.filter(p => !p.featured).forEach(({ from, to }) => {
+    const key = `${from}-${to}`;
+    const base = baseMap[from];
+    if (!base) return;
+    const rate = base.upper ? base.rates[to] : base.rates[to.toLowerCase()];
+    if (rate) next[key] = { rate, label: base.label };
+  });
+
+  // Fallback SGD-MYR if CIMB failed
+  if (!next['SGD-MYR'] && sgdBase) {
+    const rate = sgdBase.upper ? sgdBase.rates['MYR'] : sgdBase.rates['myr'];
+    if (rate) next['SGD-MYR'] = { rate, label: sgdBase.label + ' (CIMB fallback)', fetchedAt: new Date().toISOString() };
+  }
+
+  // Update history
+  Object.entries(next).forEach(([k, v]) => {
+    if (!history[k]) {
+      history[k] = Array.from({length:24}, () => ({ r: v.rate * (1 + (Math.random()-.5)*.01) }));
+    } else {
+      history[k] = [...history[k].slice(-23), { r: v.rate }];
+    }
+  });
+
+  rates = next;
+  setStatus('live');
+  renderRates();
+  updateCIMBHero();
+  checkAlerts();
+}
+
+// ── Render rates ──────────────────────────────────────────────────────────
+function renderRates() {
+  const loading = document.getElementById('rate-loading');
+  const grid = document.getElementById('rate-grid');
+  loading.style.display = 'none';
+  grid.style.display = 'grid';
+  grid.innerHTML = '';
+
+  PAIRS.forEach(({ from, to, f1, f2, featured }) => {
+    const key = `${from}-${to}`;
+    const obj = rates[key];
+    const hist = history[key] || [];
+    const vals = hist.map(h => h.r);
+    const prev = vals.length > 1 ? vals[vals.length-2] : obj?.rate;
+    const chg = obj?.rate && prev ? ((obj.rate - prev)/prev*100) : 0;
+    const up = chg >= 0;
+    const col = up ? '#22c55e' : '#ef4444';
+
+    const card = document.createElement('div');
+    card.className = 'card rate-card' + (featured ? ' featured' : '');
+    card.onclick = () => toggleCardActions(card, from, to, key);
+
+    const badgeHtml = obj ? `<span class="tag" style="background:${badgeBg(obj.label)};color:${badgeColor(obj.label)};font-size:9px">${obj.label}</span>` : '';
+    const timeHtml = featured && obj?.fetchedAt ? `<div class="mono" style="font-size:10px;color:#7a3030;margin-top:3px">🕐 ${fmtTime(obj.fetchedAt)}</div>` : '';
+    const sparkSvg = sparkline(vals, 110, 32, col);
+
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+            <span style="font-size:12px;color:#6b7a96">${f1} ${from} → ${f2} ${to}</span>
+            ${badgeHtml}
+          </div>
+          <div class="mono" style="font-size:22px;font-weight:600;letter-spacing:-.03em">
+            ${obj ? obj.rate.toFixed(4) : '<span style="color:#2a3448;font-size:14px">—</span>'}
+          </div>
+          ${timeHtml}
+        </div>
+        <div style="text-align:right">
+          ${sparkSvg}
+          ${obj ? `<div class="mono" style="font-size:11px;color:${col};margin-top:3px">${up?'▲':'▼'} ${Math.abs(chg).toFixed(3)}%</div>` : ''}
+        </div>
+      </div>
+      <div class="card-actions" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #1a2235">
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="event.stopPropagation();goTab('alerts');setAlertPair('${key}')" style="flex:1;background:#1e3a60;color:#93c5fd;padding:8px;font-size:12px">+ Alert</button>
+          <button class="btn" onclick="event.stopPropagation();goTab('convert');setConvPair('${from}','${to}')" style="flex:1;background:#1a2a1a;color:#86efac;padding:8px;font-size:12px">Convert</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function toggleCardActions(card, from, to, key) {
+  const actions = card.querySelector('.card-actions');
+  actions.style.display = actions.style.display === 'none' ? 'block' : 'none';
+}
+
+function updateCIMBHero() {
+  const obj = rates['SGD-MYR'];
+  if (!obj) return;
+  document.getElementById('cimb-rate').textContent = obj.rate.toFixed(4);
+  document.getElementById('cimb-badge').textContent = obj.label;
+  if (obj.fetchedAt) {
+    document.getElementById('cimb-time').textContent = '🕐 Read from CIMB at ' + fmtTime(obj.fetchedAt);
+  }
+}
+
+// ── Sparkline SVG ─────────────────────────────────────────────────────────
+function sparkline(vals, w, h, fallbackColor) {
+  if (!vals || vals.length < 2) return '';
+  const mn = Math.min(...vals), mx = Math.max(...vals), rng = mx - mn || 0.0001;
+  const pts = vals.map((v,i) => `${(i/(vals.length-1))*w},${h-((v-mn)/rng)*(h-4)-2}`).join(' ');
+  const col = vals[vals.length-1] >= vals[0] ? '#22c55e' : '#ef4444';
+  const uid = 'g'+Math.random().toString(36).slice(2);
+  return `<svg width="${w}" height="${h}" style="overflow:visible">
+    <defs><linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${col}" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="${col}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <polygon points="0,${h} ${pts} ${w},${h}" fill="url(#${uid})"/>
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+// ── Badge helpers ─────────────────────────────────────────────────────────
+function badgeBg(label) {
+  if (label==='CIMB') return '#3a0505';
+  if (label==='ExchangeRate-API') return '#003325';
+  return '#1a2040';
+}
+function badgeColor(label) {
+  if (label==='CIMB') return '#fca5a5';
+  if (label==='ExchangeRate-API') return '#6ee7e7';
+  return '#93c5fd';
+}
+
+// ── Status ────────────────────────────────────────────────────────────────
+function setStatus(s) {
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  if (s==='loading') { dot.style.background='#3b82f6'; dot.style.animation='spin 1s linear infinite'; dot.style.border='1.5px solid #3b82f6'; dot.style.borderTopColor='transparent'; dot.style.borderRadius='50%'; txt.textContent='Fetching…'; }
+  if (s==='live')    { dot.style.background='#22c55e'; dot.style.animation='pulse 2s infinite'; dot.style.border='none'; txt.textContent='LIVE · '+new Date().toLocaleTimeString(); }
+  if (s==='error')   { dot.style.background='#ef4444'; dot.style.animation='none'; txt.textContent='Error'; }
+}
+
+// ── Alerts ────────────────────────────────────────────────────────────────
+function addAlert() {
+  const pair  = document.getElementById('alert-pair').value;
+  const type  = document.getElementById('alert-type').value;
+  const value = parseFloat(document.getElementById('alert-value').value);
+  if (!value) return;
+  alerts.push({ id: Date.now(), pair, type, value, fired: false });
+  document.getElementById('alert-value').value = '';
+  renderAlerts();
+}
+
+function renderAlerts() {
+  const el = document.getElementById('alerts-list');
+  if (!alerts.length) { el.innerHTML = '<div style="text-align:center;color:#2a3448;padding:48px 0;font-size:14px">No alerts yet — add one above</div>'; return; }
+  el.innerHTML = alerts.map(al => {
+    const cur = rates[al.pair]?.rate;
+    const fired = al.fired;
+    return `<div class="card" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;opacity:${fired?.6:1}">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:20px">${fired?'✅':'⏳'}</div>
+        <div>
+          <div style="font-size:14px;font-weight:500">${al.pair} ${al.type==='below'?'↘ below':'↗ above'} <span class="mono" style="color:#93c5fd">${al.value}</span></div>
+          <div style="font-size:12px;color:#4a5568;margin-top:2px">Now: <span class="mono" style="color:${cur&&cur>=al.value?'#22c55e':'#ef4444'}">${cur?cur.toFixed(4):'—'}</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="tag" style="background:${fired?'#1a2f1a':'#1a2040'};color:${fired?'#86efac':'#93c5fd'}">${fired?'FIRED':'ACTIVE'}</span>
+        <button class="btn" onclick="removeAlert(${al.id})" style="background:#2a1a1a;color:#ef4444;padding:6px 10px;font-size:12px">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function removeAlert(id) {
+  alerts = alerts.filter(a => a.id !== id);
+  renderAlerts();
+}
+
+function checkAlerts() {
+  alerts.forEach(al => {
+    if (al.fired) return;
+    const cur = rates[al.pair]?.rate;
+    if (!cur) return;
+    const hit = (al.type==='below'&&cur<=al.value)||(al.type==='above'&&cur>=al.value);
+    if (hit) {
+      al.fired = true;
+      pushNotif(`🔔 ${al.pair} hit ${cur.toFixed(4)} — target ${al.type} ${al.value}`);
+      renderAlerts();
+    }
+  });
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────
+function pushNotif(msg) {
+  notifs.unshift({ id: Date.now(), msg, time: new Date().toLocaleTimeString() });
+  notifs = notifs.slice(0, 5);
+  const toast = document.getElementById('notif-toast');
+  toast.style.display = 'block';
+  toast.textContent = msg;
+  const badge = document.getElementById('notif-badge');
+  badge.style.display = 'flex';
+  badge.textContent = notifs.length;
+  renderNotifLog();
+}
+
+function toggleNotifs() { renderNotifLog(); }
+
+function renderNotifLog() {
+  const el = document.getElementById('notif-log');
+  if (!notifs.length || !el) return;
+  el.innerHTML = '<div style="font-size:12px;color:#6b7a96;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Notification Log</div>' +
+    notifs.map(n => `<div class="card notif-anim" style="margin-bottom:8px;font-size:13px;display:flex;justify-content:space-between;align-items:center;border-color:#1e3a60">
+      <span>${n.msg}</span>
+      <span class="mono" style="font-size:11px;color:#4a5568;flex-shrink:0;margin-left:10px">${n.time}</span>
+    </div>`).join('');
+}
+
+// ── Convert ───────────────────────────────────────────────────────────────
+function swapConv() {
+  const f = document.getElementById('conv-from');
+  const t = document.getElementById('conv-to');
+  [f.value, t.value] = [t.value, f.value];
+  clearResult();
+}
+
+function clearResult() {
+  document.getElementById('conv-result').style.display = 'none';
+  convData = null;
+  updateBankingBanner();
+}
+
+function doConvert() {
+  const amount = parseFloat(document.getElementById('conv-amount').value);
+  const from   = document.getElementById('conv-from').value;
+  const to     = document.getElementById('conv-to').value;
+  if (!amount || from === to) return;
+  const key  = `${from}-${to}`;
+  const rkey = `${to}-${from}`;
+  const obj  = rates[key] || (rates[rkey] ? { rate: 1/rates[rkey].rate, label: rates[rkey].label } : null);
+  if (!obj) { alert(`Rate for ${from}→${to} not available. Try refreshing.`); return; }
+  const result = (amount * obj.rate).toFixed(4);
+  convData = { amount, from, to, result, rate: obj.rate, label: obj.label };
+  document.getElementById('conv-result').style.display = 'block';
+  document.getElementById('conv-display').innerHTML = `${amount} ${from} <span style="color:#2a3448;margin:0 8px">=</span> <span style="color:#22c55e">${result} ${to}</span>`;
+  document.getElementById('conv-rate-label').textContent = `1 ${from} = ${obj.rate.toFixed(6)} ${to}`;
+  document.getElementById('conv-source-label').innerHTML = `<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;background:${badgeBg(obj.label)};color:${badgeColor(obj.label)}">${obj.label}</span>`;
+  updateBankingBanner();
+}
+
+// ── Banking ───────────────────────────────────────────────────────────────
+function renderBanking() {
+  const list = document.getElementById('banking-list');
+  list.innerHTML = BANKING.map(app => {
+    const granted = !!perms[app.id];
+    const canSend = granted && convData;
+    return `<div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:42px;height:42px;border-radius:10px;background:${app.color};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;flex-shrink:0">${app.icon}</div>
+        <div>
+          <div style="font-weight:600;font-size:14px">${app.name}</div>
+          <div style="font-size:12px;color:#4a5568">${app.desc}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <a href="${app.url}" target="_blank" style="background:#0d1320;border:1px solid #1a2235;color:#6b7a96;padding:7px 10px;font-size:12px;border-radius:8px;text-decoration:none;font-weight:500">🌐 Open</a>
+        ${granted
+          ? `<span class="tag" style="background:#1a2f1a;color:#86efac">PERMITTED</span>
+             ${canSend ? `<button class="btn" onclick="executeTransfer('${app.id}')" style="background:${app.color};color:#fff;padding:7px 14px;font-size:12px">Send</button>` : ''}
+             <button class="btn" onclick="revokeApp('${app.id}')" style="background:#2a1a1a;color:#ef4444;padding:7px 10px;font-size:12px">Revoke</button>`
+          : `<button class="btn" onclick="grantApp('${app.id}')" style="background:#0f1e36;border:1px solid #1d4ed8;color:#93c5fd;padding:7px 14px;font-size:13px">Grant Access</button>`
+        }
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function grantApp(id)  { perms[id]=true;  pushNotif(`✅ Access granted to ${id}`); renderBanking(); }
+function revokeApp(id) { perms[id]=false; renderBanking(); }
+function executeTransfer(id) {
+  if (!convData) return;
+  const app = BANKING.find(a => a.id===id);
+  pushNotif(`💸 ${app.name}: ${convData.amount} ${convData.from} → ${convData.result} ${convData.to}`);
+  window.open(app.url, '_blank');
+}
+
+function updateBankingBanner() {
+  const banner = document.getElementById('conv-ready-banner');
+  const text   = document.getElementById('banking-ready-text');
+  if (convData) {
+    banner.style.display = 'flex';
+    text.textContent = `${convData.amount} ${convData.from} → ${convData.result} ${convData.to}`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+// ── Nav ───────────────────────────────────────────────────────────────────
+function goTab(tab) {
+  ['rates','alerts','convert','banking'].forEach(t => {
+    document.getElementById('view-'+t).style.display = t===tab ? 'block' : 'none';
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  });
+  currentView = tab;
+  if (tab==='alerts') renderAlerts();
+  if (tab==='banking') renderBanking();
+}
+
+function setAlertPair(pair) { document.getElementById('alert-pair').value = pair; updateAlertCurrent(); }
+function setConvPair(from,to) { document.getElementById('conv-from').value=from; document.getElementById('conv-to').value=to; clearResult(); }
+
+document.getElementById('alert-pair').addEventListener('change', updateAlertCurrent);
+function updateAlertCurrent() {
+  const pair = document.getElementById('alert-pair').value;
+  const obj  = rates[pair];
+  const el   = document.getElementById('alert-current');
+  el.textContent = obj ? `Current: ${obj.rate.toFixed(4)}` : '';
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function fmtTime(iso) {
+  return new Date(iso).toLocaleTimeString('en-SG', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+loadAll();
+setInterval(loadAll, 120000);
+</script>
+
+</body>
+</html>
