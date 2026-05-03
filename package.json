@@ -1,7 +1,6 @@
 {
   "name": "fx-pulse",
-  "dependencies": {
-    "@sparticuz/chromium": "^123.0.0",
-    "puppeteer-core": "^22.0.0"
-  }
+  "version": "1.0.0",
+  "dependencies": {}
 }
+
