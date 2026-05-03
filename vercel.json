@@ -1,4 +1,12 @@
 {
-  "buildCommand": null,
-  "outputDirectory": "."
+  "version": 2,
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "installCommand": "npm install",
+  "functions": {
+    "api/cimb-rate.js": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  }
 }
